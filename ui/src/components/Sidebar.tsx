@@ -9,6 +9,8 @@ import {
   SquarePen,
   Network,
   Settings,
+  Bot,
+  FolderKanban,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -88,7 +90,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav className={`flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 py-2 ${isCollapsed ? "px-0 items-center" : "px-3"}`}>
+      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 py-2">
         <div className="flex flex-col gap-0.5 w-full">
           {/* New Issue button */}
           {isCollapsed ? (
@@ -126,7 +128,7 @@ export function Sidebar() {
             context={pluginContext}
             className="flex flex-col gap-0.5"
             itemClassName="text-[13px] font-medium"
-            missingBehavior="placeholder"
+            missingBehavior="hidden"
           />
         </div>
 
@@ -135,9 +137,15 @@ export function Sidebar() {
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />
         </SidebarSection>
 
-        <SidebarProjects />
+        <SidebarSection label="Projects">
+          <SidebarNavItem to="/projects" label="All Projects" icon={FolderKanban} end />
+          <SidebarProjects />
+        </SidebarSection>
 
-        <SidebarAgents />
+        <SidebarSection label="Agents">
+          <SidebarNavItem to="/agents/all" label="All Agents" icon={Bot} />
+          <SidebarAgents />
+        </SidebarSection>
 
         <SidebarSection label="Company">
           <SidebarNavItem to="/org" label="Org" icon={Network} />
@@ -151,7 +159,7 @@ export function Sidebar() {
           context={pluginContext}
           className="flex flex-col gap-3"
           itemClassName="rounded-lg border border-border p-3"
-          missingBehavior="placeholder"
+          missingBehavior="hidden"
         />
       </nav>
     </aside>
