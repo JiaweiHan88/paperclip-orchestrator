@@ -6,6 +6,7 @@ import {
   PLUGIN_ID,
   PLUGIN_VERSION,
   SLOT_IDS,
+  TOOL_NAMES,
   WEBHOOK_KEYS,
 } from "./constants.js";
 
@@ -107,7 +108,21 @@ const manifest: PaperclipPluginManifestV1 = {
     },
   ],
   tools: [
-    // Tools will be declared in a future pass.
+    // ── Read-only (LOW risk) ──────────────────────────────────────────────
+    { name: TOOL_NAMES.getConfluencePageById, displayName: "Get Confluence Page by ID", description: "Fetch a Confluence page by its unique ID and convert to markdown.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getConfluencePageByTitle, displayName: "Get Confluence Page by Title", description: "Fetch a Confluence page by its title and space key.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getConfluencePageByIdHtml, displayName: "Get Confluence Page HTML by ID", description: "Fetch the raw HTML storage format of a Confluence page by ID.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getConfluencePageByTitleHtml, displayName: "Get Confluence Page HTML by Title", description: "Fetch the raw HTML storage format of a Confluence page by title.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.searchConfluenceWithCql, displayName: "Search Confluence (CQL)", description: "Search Confluence content using CQL (Confluence Query Language).", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.searchConfluencePagesFreetext, displayName: "Search Confluence (Freetext)", description: "Search Confluence pages using free-text query.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getConfluenceSpaces, displayName: "Get Confluence Spaces", description: "List all accessible Confluence spaces.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getConfluencePageTree, displayName: "Get Confluence Page Tree", description: "Get the hierarchical page tree for a space or under a specific page.", parametersSchema: { type: "object" } },
+    // ── Medium risk ───────────────────────────────────────────────────────
+    { name: TOOL_NAMES.createConfluencePage, displayName: "Create Confluence Page", description: "Create a new Confluence page in a specified space.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.addConfluenceComment, displayName: "Add Confluence Comment", description: "Add a comment to an existing Confluence page.", parametersSchema: { type: "object" } },
+    // ── High risk ─────────────────────────────────────────────────────────
+    { name: TOOL_NAMES.updateConfluencePage, displayName: "Update Confluence Page", description: "Update an existing Confluence page with new content.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.relocateConfluencePage, displayName: "Relocate Confluence Page", description: "Move or copy a Confluence page to a different parent.", parametersSchema: { type: "object" } },
   ],
   ui: {
     slots: [

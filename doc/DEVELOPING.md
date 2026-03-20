@@ -67,12 +67,74 @@ pnpm paperclipai run
 2. `paperclipai doctor` with repair enabled
 3. starts the server when checks pass
 
-## Docker Quickstart (No local Node install)
+## AI Tools Bridge (Python Sidecar)
 
-Build and run Paperclip in Docker:
+The GitHub, Jira, Confluence, and Gerrit plugins forward agent tool calls to a
+Python sidecar called the **AI Tools Bridge**. The bridge exposes all
+`ai_tools_*` tool functions over HTTP so the TypeScript plugin workers don't
+need to re-implement them.
+
+### Automatic startup (recommended)
+
+`pnpm dev` automatically starts the bridge if [`uv`](https://docs.astral.sh/uv/)
+is installed:
 
 ```sh
-docker build -t paperclip-local .
+# Install uv (one-time)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Then just run dev as normal — bridge starts automatically
+pnpm dev
+```
+
+The bridge listens on `http://localhost:8000` and `AI_TOOLS_BRIDGE_URL` is set
+in the server process environment automatically.
+
+### Manual startup
+
+```sh
+cd ai_tools_bridge
+uv sync
+uv run python -m ai_tools_bridge
+```
+
+### Skip the bridge
+
+If you don't need the plugin tools (e.g. you're working on core server features),
+set `AI_TOOLS_BRIDGE_DISABLED=true` in your environment:
+
+```sh
+AI_TOOLS_BRIDGE_DISABLED=true pnpm dev
+```
+
+### Remote bridge
+
+To point at a pre-running bridge (e.g. in a shared dev environment or Docker):
+
+```sh
+AI_TOOLS_BRIDGE_URL=http://my-bridge-host:8000 pnpm dev
+```
+
+### Bridge environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AI_TOOLS_BRIDGE_URL` | `http://localhost:8000` | Bridge URL used by plugin workers |
+| `AI_TOOLS_BRIDGE_DISABLED` | — | Set to `true` to skip bridge startup in `pnpm dev` |
+| `AI_TOOLS_BRIDGE_PORT` | `8000` | Port the bridge listens on when auto-started |
+| `BRIDGE_LOG_LEVEL` | `info` | Uvicorn log level (`debug`, `info`, `warning`, `error`) |
+
+### Bridge in Docker
+
+The bridge is included in both Compose files and starts automatically before
+the Paperclip server:
+
+```sh
+docker compose up --build
+docker compose -f docker-compose.quickstart.yml up --build
+```
+
+## Docker Quickstart (No local Node install)
 docker run --name paperclip \
   -p 3100:3100 \
   -e HOST=0.0.0.0 \

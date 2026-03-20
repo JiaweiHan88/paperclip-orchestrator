@@ -6,6 +6,7 @@ import type {
   PluginJobContext,
   PluginWebhookInput,
 } from "@paperclipai/plugin-sdk";
+import { createBridgeClient } from "@paperclipai/adapter-utils";
 import { JOB_KEYS, WEBHOOK_KEYS } from "./constants.js";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ type GerritConfig = {
 };
 
 let currentContext: PluginContext | null = null;
+let currentBridgeUrl: string = "http://ai-tools-bridge:8000";
 
 async function getConfig(ctx: PluginContext): Promise<GerritConfig> {
   const raw = await ctx.config.get();
@@ -81,8 +83,60 @@ const plugin: PaperclipPlugin = definePlugin({
       return { ok: true };
     });
 
-    // ----- Tools (declared later) ----------------------------------------
-    // Tools will be registered in a future pass via ctx.tools.register().
+    // ----- Tools --------------------------------------------------------
+    // Auto-register all tools from the Python bridge at startup.
+    const bridgeUrl = process.env.AI_TOOLS_BRIDGE_URL ?? "http://ai-tools-bridge:8000";
+    currentBridgeUrl = bridgeUrl;
+    const bridge = createBridgeClient(bridgeUrl, "gerrit");
+
+    try {
+      const tools = await bridge.getToolManifest();
+
+      for (const tool of tools) {
+        ctx.tools.register(
+          tool.name,
+          {
+            displayName: tool.display_name,
+            description: tool.description,
+            parametersSchema: tool.parameters_schema,
+          },
+          async (params, _runCtx) => {
+            const config = await getConfig(ctx);
+            const credentials: Record<string, unknown> = {};
+
+            if (config.gerritBaseUrl) {
+              credentials["gerrit_base_url"] = config.gerritBaseUrl;
+            }
+            if (config.gerritUsername) {
+              credentials["username"] = config.gerritUsername;
+            }
+            if (config.gerritTokenSecretRef) {
+              try {
+                const token = await ctx.secrets.resolve(config.gerritTokenSecretRef);
+                credentials["token"] = token;
+              } catch {
+                ctx.logger.warn("gerrit: failed to resolve token secret", {
+                  ref: config.gerritTokenSecretRef,
+                });
+              }
+            }
+
+            const result = await bridge.execute(tool.name, params as Record<string, unknown>, credentials);
+            if (result.error) {
+              return { error: result.error };
+            }
+            return { content: result.content, data: result.data };
+          },
+        );
+      }
+
+      ctx.logger.info("gerrit plugin: registered tools from bridge", { count: tools.length, bridgeUrl });
+    } catch (err) {
+      ctx.logger.warn("gerrit plugin: bridge unavailable at startup — tools not registered", {
+        bridgeUrl,
+        error: (err as Error).message,
+      });
+    }
 
     ctx.logger.info("gerrit plugin setup complete");
   },
@@ -107,12 +161,17 @@ const plugin: PaperclipPlugin = definePlugin({
     if (!ctx) return { status: "degraded", message: "Gerrit plugin not yet initialized" };
     const config = await getConfig(ctx);
     const configured = !!config.gerritBaseUrl && !!config.gerritTokenSecretRef;
-    return {
-      status: configured ? "ok" : "degraded",
-      message: configured
-        ? "Gerrit plugin configured and ready"
-        : "Gerrit plugin loaded but not configured — set Base URL and credentials in settings",
-    };
+
+    const bridge = createBridgeClient(currentBridgeUrl, "gerrit");
+    const bridgeOk = await bridge.isHealthy();
+
+    if (!configured) {
+      return { status: "degraded", message: "Gerrit plugin loaded but not configured — set Base URL and credentials in settings" };
+    }
+    if (!bridgeOk) {
+      return { status: "degraded", message: `Gerrit plugin configured but AI tools bridge is unreachable at ${currentBridgeUrl}` };
+    }
+    return { status: "ok", message: "Gerrit plugin configured and ready" };
   },
 });
 

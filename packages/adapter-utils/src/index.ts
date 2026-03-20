@@ -45,3 +45,14 @@ export {
   redactTranscriptEntryPaths,
 } from "./log-redaction.js";
 export { inferOpenAiCompatibleBiller } from "./billing.js";
+export {
+  createBridgeClient,
+  BridgeError,
+} from "./bridge-client.js";
+export type {
+  BridgeClient,
+  BridgeToolManifestEntry,
+  BridgeManifestResponse,
+  BridgeExecuteRequest,
+  BridgeToolResult,
+} from "./bridge-client.js";

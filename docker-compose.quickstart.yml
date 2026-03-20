@@ -1,4 +1,21 @@
 services:
+  ai-tools-bridge:
+    build:
+      context: .
+      dockerfile: ai_tools_bridge/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      BRIDGE_HOST: "0.0.0.0"
+      BRIDGE_PORT: "8000"
+      BRIDGE_LOG_LEVEL: "${BRIDGE_LOG_LEVEL:-info}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
   paperclip:
     build:
       context: .
@@ -14,5 +31,9 @@ services:
       PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
       PAPERCLIP_PUBLIC_URL: "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}"
+      AI_TOOLS_BRIDGE_URL: "http://ai-tools-bridge:8000"
     volumes:
       - "${PAPERCLIP_DATA_DIR:-./data/docker-paperclip}:/paperclip"
+    depends_on:
+      ai-tools-bridge:
+        condition: service_healthy

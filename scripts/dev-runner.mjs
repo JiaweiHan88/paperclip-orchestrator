@@ -216,6 +216,79 @@ async function buildPluginSdk() {
 
 await buildPluginSdk();
 
+// ---------------------------------------------------------------------------
+// Optionally start the AI tools bridge (Python sidecar)
+// ---------------------------------------------------------------------------
+
+let bridgeChild = null;
+
+async function maybeStartBridge() {
+  // Skip if explicitly disabled
+  if (process.env.AI_TOOLS_BRIDGE_DISABLED === "true") return;
+  // Skip if a remote bridge URL is configured
+  if (process.env.AI_TOOLS_BRIDGE_URL && !process.env.AI_TOOLS_BRIDGE_URL.includes("localhost")) return;
+
+  // Determine if uv is available
+  const uvCheck = await runPnpm([], { stdio: "pipe" }).catch(() => null);
+  const uvAvailable = await new Promise((resolve) => {
+    const proc = spawn("uv", ["--version"], {
+      stdio: "pipe",
+      shell: process.platform === "win32",
+    });
+    proc.on("error", () => resolve(false));
+    proc.on("exit", (code) => resolve(code === 0));
+  });
+
+  if (!uvAvailable) {
+    console.log("[paperclip] uv not found — skipping AI tools bridge (set AI_TOOLS_BRIDGE_URL to use a remote bridge)");
+    return;
+  }
+
+  const bridgePort = process.env.AI_TOOLS_BRIDGE_PORT ?? "8000";
+  const bridgeDir = new URL("../ai_tools_bridge", import.meta.url).pathname;
+
+  console.log(`[paperclip] starting AI tools bridge on port ${bridgePort}...`);
+
+  const bridgeEnv = {
+    ...process.env,
+    BRIDGE_PORT: bridgePort,
+    BRIDGE_LOG_LEVEL: process.env.BRIDGE_LOG_LEVEL ?? "info",
+  };
+
+  bridgeChild = spawn(
+    "uv",
+    ["run", "--project", bridgeDir, "python", "-m", "ai_tools_bridge"],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: bridgeEnv,
+      shell: process.platform === "win32",
+      cwd: bridgeDir,
+    },
+  );
+
+  bridgeChild.stdout?.on("data", (chunk) => {
+    process.stdout.write(`[bridge] ${chunk}`);
+  });
+  bridgeChild.stderr?.on("data", (chunk) => {
+    process.stderr.write(`[bridge] ${chunk}`);
+  });
+  bridgeChild.on("error", (err) => {
+    console.error("[paperclip] AI tools bridge failed to start:", err.message);
+  });
+  bridgeChild.on("exit", (code, signal) => {
+    if (signal) return;
+    if (code !== 0) {
+      console.warn(`[paperclip] AI tools bridge exited with code ${code}`);
+    }
+  });
+
+  // Set the bridge URL for the server process
+  env.AI_TOOLS_BRIDGE_URL = `http://localhost:${bridgePort}`;
+  console.log(`[paperclip] AI tools bridge started — AI_TOOLS_BRIDGE_URL=${env.AI_TOOLS_BRIDGE_URL}`);
+}
+
+await maybeStartBridge();
+
 const serverScript = mode === "watch" ? "dev:watch" : "dev";
 const child = spawn(
   pnpmBin,
@@ -224,6 +297,10 @@ const child = spawn(
 );
 
 child.on("exit", (code, signal) => {
+  // Shut down the bridge when the server exits
+  if (bridgeChild && !bridgeChild.killed) {
+    bridgeChild.kill();
+  }
   if (signal) {
     process.kill(process.pid, signal);
     return;
