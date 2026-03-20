@@ -10,6 +10,66 @@ import { createBridgeClient } from "@paperclipai/adapter-utils";
 import { JOB_KEYS, WEBHOOK_KEYS } from "./constants.js";
 
 // ---------------------------------------------------------------------------
+// Bridge tool registration with retry
+// ---------------------------------------------------------------------------
+
+async function resolveBridgeUrl(envUrl: string): Promise<string> {
+  if (process.env.AI_TOOLS_BRIDGE_URL) return process.env.AI_TOOLS_BRIDGE_URL;
+  const candidates =
+    envUrl === "http://ai-tools-bridge:8000"
+      ? ["http://localhost:8000", "http://ai-tools-bridge:8000"]
+      : [envUrl];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(2_000) });
+      if (res.ok) return url;
+    } catch { /* try next */ }
+  }
+  return envUrl;
+}
+
+async function registerBridgeTools(
+  ctx: PluginContext,
+  packageSlug: string,
+  configuredUrl: string,
+  buildCredentials: (config: ReturnType<typeof getConfig> extends Promise<infer T> ? T : never) => Promise<Record<string, unknown>>,
+  logPrefix: string,
+): Promise<void> {
+  const delays = [2_000, 5_000, 10_000, 20_000, 30_000, 60_000, 120_000, 180_000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const bridgeUrl = await resolveBridgeUrl(configuredUrl);
+      const bridge = createBridgeClient(bridgeUrl, packageSlug);
+      const tools = await bridge.getToolManifest();
+      for (const tool of tools) {
+        ctx.tools.register(
+          tool.name,
+          { displayName: tool.display_name, description: tool.description, parametersSchema: tool.parameters_schema },
+          async (params, _runCtx) => {
+            const config = await getConfig(ctx);
+            const credentials = await buildCredentials(config);
+            const execUrl = await resolveBridgeUrl(configuredUrl);
+            const execBridge = createBridgeClient(execUrl, packageSlug);
+            const result = await execBridge.execute(tool.name, params as Record<string, unknown>, credentials);
+            if (result.error) return { error: result.error };
+            return { content: result.content, data: result.data };
+          },
+        );
+      }
+      ctx.logger.info(`${logPrefix}: registered tools from bridge`, { count: tools.length, bridgeUrl });
+      return;
+    } catch (err) {
+      if (attempt === delays.length) {
+        ctx.logger.warn(`${logPrefix}: bridge unavailable after all retries — tools not registered`, { configuredUrl, error: (err as Error).message });
+        return;
+      }
+      ctx.logger.debug(`${logPrefix}: bridge not ready, retrying in ${delays[attempt]! / 1000}s`, { attempt });
+      await new Promise((r) => setTimeout(r, delays[attempt]!));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Config shape
 // ---------------------------------------------------------------------------
 
@@ -86,59 +146,28 @@ const plugin: PaperclipPlugin = definePlugin({
     });
 
     // ----- Tools --------------------------------------------------------
-    // Auto-register all tools from the Python bridge at startup.
     const bridgeUrl = process.env.AI_TOOLS_BRIDGE_URL ?? "http://ai-tools-bridge:8000";
     currentBridgeUrl = bridgeUrl;
-    const bridge = createBridgeClient(bridgeUrl, "confluence");
 
-    try {
-      const tools = await bridge.getToolManifest();
-
-      for (const tool of tools) {
-        ctx.tools.register(
-          tool.name,
-          {
-            displayName: tool.display_name,
-            description: tool.description,
-            parametersSchema: tool.parameters_schema,
-          },
-          async (params, _runCtx) => {
-            const config = await getConfig(ctx);
-            const credentials: Record<string, unknown> = {};
-
-            if (config.confluenceBaseUrl) {
-              credentials["confluence_base_url"] = config.confluenceBaseUrl;
-            }
-            if (config.confluenceTokenSecretRef) {
-              try {
-                const token = await ctx.secrets.resolve(config.confluenceTokenSecretRef);
-                credentials["token"] = token;
-              } catch {
-                ctx.logger.warn("confluence: failed to resolve token secret", {
-                  ref: config.confluenceTokenSecretRef,
-                });
-              }
-            }
-            if (config.confluenceUserEmail) {
-              credentials["user_email"] = config.confluenceUserEmail;
-            }
-
-            const result = await bridge.execute(tool.name, params as Record<string, unknown>, credentials);
-            if (result.error) {
-              return { error: result.error };
-            }
-            return { content: result.content, data: result.data };
-          },
-        );
-      }
-
-      ctx.logger.info("confluence plugin: registered tools from bridge", { count: tools.length, bridgeUrl });
-    } catch (err) {
-      ctx.logger.warn("confluence plugin: bridge unavailable at startup — tools not registered", {
-        bridgeUrl,
-        error: (err as Error).message,
-      });
-    }
+    void registerBridgeTools(
+      ctx,
+      "confluence",
+      bridgeUrl,
+      async (config) => {
+        const credentials: Record<string, unknown> = {};
+        if (config.confluenceBaseUrl) credentials["confluence_base_url"] = config.confluenceBaseUrl;
+        if (config.confluenceTokenSecretRef) {
+          try {
+            credentials["token"] = await ctx.secrets.resolve(config.confluenceTokenSecretRef);
+          } catch {
+            ctx.logger.warn("confluence: failed to resolve token secret", { ref: config.confluenceTokenSecretRef });
+          }
+        }
+        if (config.confluenceUserEmail) credentials["user_email"] = config.confluenceUserEmail;
+        return credentials;
+      },
+      "confluence plugin",
+    );
 
     ctx.logger.info("confluence plugin setup complete");
   },
@@ -164,7 +193,8 @@ const plugin: PaperclipPlugin = definePlugin({
     const config = await getConfig(ctx);
     const configured = !!config.confluenceBaseUrl && !!config.confluenceTokenSecretRef;
 
-    const bridge = createBridgeClient(currentBridgeUrl, "confluence");
+    const resolvedUrl = await resolveBridgeUrl(currentBridgeUrl);
+    const bridge = createBridgeClient(resolvedUrl, "confluence");
     const bridgeOk = await bridge.isHealthy();
 
     if (!configured) {
