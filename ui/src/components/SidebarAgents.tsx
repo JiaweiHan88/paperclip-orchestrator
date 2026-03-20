@@ -43,7 +43,7 @@ export function SidebarAgents() {
   const [open, setOpen] = useState(true);
   const { selectedCompanyId } = useCompany();
   const { openNewAgent } = useDialog();
-  const { isMobile, setSidebarOpen } = useSidebar();
+  const { isMobile, setSidebarOpen, isCollapsed } = useSidebar();
   const location = useLocation();
 
   const { data: agents } = useQuery({
@@ -78,8 +78,11 @@ export function SidebarAgents() {
   const activeAgentId = agentMatch?.[1] ?? null;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="group">
+    <Collapsible open={open && !isCollapsed} onOpenChange={setOpen}>
+      <div className="group w-full">
+        {isCollapsed ? (
+          <div className="border-t border-border/50 mx-2 my-1" />
+        ) : (
         <div className="flex items-center px-3 py-1.5">
           <CollapsibleTrigger className="flex items-center gap-1 flex-1 min-w-0">
             <ChevronRight
@@ -103,13 +106,14 @@ export function SidebarAgents() {
             <Plus className="h-3 w-3" />
           </button>
         </div>
+        )}
       </div>
 
       <CollapsibleContent>
         <div className="flex flex-col gap-0.5 mt-0.5">
           {visibleAgents.map((agent: Agent) => {
             const runCount = liveCountByAgent.get(agent.id) ?? 0;
-            return (
+            const link = (
               <NavLink
                 key={agent.id}
                 to={agentUrl(agent)}
@@ -117,34 +121,44 @@ export function SidebarAgents() {
                   if (isMobile) setSidebarOpen(false);
                 }}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-1.5 text-[13px] font-medium transition-colors",
+                  "flex items-center gap-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                  isCollapsed ? "justify-center px-0 w-full" : "px-3",
                   activeAgentId === agentRouteRef(agent)
                     ? "bg-accent text-foreground"
                     : "text-foreground/80 hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 <AgentIcon icon={agent.icon} className="shrink-0 h-3.5 w-3.5 text-muted-foreground" />
-                <span className="flex-1 truncate">{agent.name}</span>
-                {(agent.pauseReason === "budget" || runCount > 0) && (
-                  <span className="ml-auto flex items-center gap-1.5 shrink-0">
-                    {agent.pauseReason === "budget" ? (
-                      <BudgetSidebarMarker title="Agent paused by budget" />
-                    ) : null}
-                    {runCount > 0 ? (
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                {!isCollapsed && (
+                  <>
+                    <span className="flex-1 truncate">{agent.name}</span>
+                    {(agent.pauseReason === "budget" || runCount > 0) && (
+                      <span className="ml-auto flex items-center gap-1.5 shrink-0">
+                        {agent.pauseReason === "budget" ? (
+                          <BudgetSidebarMarker title="Agent paused by budget" />
+                        ) : null}
+                        {runCount > 0 ? (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                          </span>
+                        ) : null}
+                        {runCount > 0 ? (
+                          <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                            {runCount} live
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                    {runCount > 0 ? (
-                      <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                        {runCount} live
-                      </span>
-                    ) : null}
-                  </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             );
+            return isCollapsed ? (
+              <div key={agent.id}>
+                {link}
+              </div>
+            ) : link;
           })}
         </div>
       </CollapsibleContent>
