@@ -23,6 +23,26 @@
 
 <br/>
 
+## 🍴 About This Fork
+
+This is a fork of [paperclipai/paperclip](https://github.com/paperclipai/paperclip) maintained by [@JiaweiHan88](https://github.com/JiaweiHan88).
+
+### What this fork adds
+
+- **Agent Plugin Graph Visualization** — A force-directed SVG graph showing each agent's plugins and tools, with interactive enable/disable toggles.
+- **Per-Agent Plugin Overrides** — Agents can selectively disable plugins or individual tools via a new `agent_plugin_overrides` database table, API routes, and UI.
+- **Expanded Agent Icon Set** — 89 Lucide icons (up from 41) organized by role category, covering all standard and [BMAD](https://github.com/bmad-agent) agent roles.
+- **Skeleton Plugin Adapters** — Starter plugins for Jira, GitHub, Gerrit, Figma, and Confluence.
+
+### Staying in sync
+
+```sh
+git fetch origin          # origin = paperclipai/paperclip
+git merge origin/master   # merge upstream changes
+```
+
+---
+
 ## What is Paperclip?
 
 # Open-source orchestration for zero-human companies
