@@ -139,6 +139,46 @@ const BUNDLED_PLUGIN_EXAMPLES: AvailablePluginExample[] = [
     localPath: "packages/plugins/examples/plugin-kitchen-sink-example",
     tag: "example",
   },
+  {
+    packageName: "@paperclipai/plugin-jira",
+    pluginKey: "paperclip.jira",
+    displayName: "Jira",
+    description: "Sync issues, comments, and status between Paperclip and Atlassian Jira. Provides bidirectional sync via webhooks and scheduled polling, plus agent tools for querying Jira during runs.",
+    localPath: "packages/plugins/examples/plugin-jira",
+    tag: "example",
+  },
+  {
+    packageName: "@paperclipai/plugin-github",
+    pluginKey: "paperclip.github",
+    displayName: "GitHub",
+    description: "Sync issues, pull requests, and comments between Paperclip and GitHub. Provides webhook-driven and polling-based sync, plus agent tools for querying GitHub during runs.",
+    localPath: "packages/plugins/examples/plugin-github",
+    tag: "example",
+  },
+  {
+    packageName: "@paperclipai/plugin-gerrit",
+    pluginKey: "paperclip.gerrit",
+    displayName: "Gerrit",
+    description: "Paperclip connector plugin for Gerrit — track code reviews, changes, and merge status.",
+    localPath: "packages/plugins/examples/plugin-gerrit",
+    tag: "example",
+  },
+  {
+    packageName: "@paperclipai/plugin-confluence",
+    pluginKey: "paperclip.confluence",
+    displayName: "Confluence",
+    description: "Link knowledge base pages to issues and give agents access to documentation context via Atlassian Confluence.",
+    localPath: "packages/plugins/examples/plugin-confluence",
+    tag: "example",
+  },
+  {
+    packageName: "@paperclipai/plugin-figma",
+    pluginKey: "paperclip.figma",
+    displayName: "Figma",
+    description: "Link designs to issues, track file changes, and surface design context for agents via Figma.",
+    localPath: "packages/plugins/examples/plugin-figma",
+    tag: "example",
+  },
 ];
 
 function listBundledPluginExamples(): AvailablePluginExample[] {
