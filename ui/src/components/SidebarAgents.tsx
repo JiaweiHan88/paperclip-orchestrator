@@ -82,9 +82,7 @@ export function SidebarAgents() {
   return (
     <Collapsible open={open && !isCollapsed} onOpenChange={setOpen}>
       <div className="group w-full">
-        {isCollapsed ? (
-          <div className="border-t border-border/50 mx-2 my-1" />
-        ) : (
+        {!isCollapsed && (
         <div className="flex items-center px-3 py-1.5">
           <CollapsibleTrigger className="flex items-center gap-1 flex-1 min-w-0">
             <ChevronRight
