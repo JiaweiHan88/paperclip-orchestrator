@@ -6,6 +6,7 @@ import {
   PLUGIN_ID,
   PLUGIN_VERSION,
   SLOT_IDS,
+  TOOL_NAMES,
   WEBHOOK_KEYS,
 } from "./constants.js";
 
@@ -110,7 +111,20 @@ const manifest: PaperclipPluginManifestV1 = {
     },
   ],
   tools: [
-    // Tools will be declared in a future pass.
+    // ── Read-only (LOW risk) ──────────────────────────────────────────────
+    { name: TOOL_NAMES.getJiraIssue, displayName: "Get Jira Issue", description: "Fetch details of a Jira issue by key.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.downloadJiraAttachment, displayName: "Download Jira Attachment", description: "Download an attachment from a Jira issue.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.searchJira, displayName: "Search Jira", description: "Search Jira issues using JQL.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getJiraPullRequests, displayName: "Get Jira Pull Requests", description: "Get pull requests associated with a Jira issue.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getJiraFields, displayName: "Get Jira Fields", description: "Discover available fields for a Jira project or issue type.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getJiraTransitions, displayName: "Get Jira Transitions", description: "Get the available workflow transitions for a Jira issue.", parametersSchema: { type: "object" } },
+    // ── Medium risk ───────────────────────────────────────────────────────
+    { name: TOOL_NAMES.createJiraTicket, displayName: "Create Jira Ticket", description: "Create a new Jira ticket.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.addJiraComment, displayName: "Add Jira Comment", description: "Add a comment to an existing Jira ticket.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.transitionJiraIssue, displayName: "Transition Jira Issue", description: "Transition a Jira issue to a new status.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.linkJiraIssues, displayName: "Link Jira Issues", description: "Create a link between two Jira issues.", parametersSchema: { type: "object" } },
+    // ── High risk ─────────────────────────────────────────────────────────
+    { name: TOOL_NAMES.updateJiraTicket, displayName: "Update Jira Ticket", description: "Update an existing Jira ticket with new field values.", parametersSchema: { type: "object" } },
   ],
   ui: {
     slots: [

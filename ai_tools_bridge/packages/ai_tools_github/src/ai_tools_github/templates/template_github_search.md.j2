@@ -1,0 +1,15 @@
+{#-jinja2: trim_blocks: True, lstrip_blocks: True #}
+## INFORMATION FROM A GITHUB SEARCH:
+{%- if search_results | length > 0 %}
+Using keyword '{{ keyword }}' {{ search_results | length }} files containing the keyword were found in the repository '{{ owner }}/{{ repo }}'.
+{%- else %}
+No results found using the keyword '{{ keyword }}' in the repository '{{ owner }}/{{ repo }}'.
+{%- endif -%}
+
+{% for search_result in search_results %}
+**file data**:
+- file_name: {{ search_result.file_name }}
+- file_path: {{ search_result.file_path }}
+- context:
+{{ search_result.fragments }}
+{% endfor -%}

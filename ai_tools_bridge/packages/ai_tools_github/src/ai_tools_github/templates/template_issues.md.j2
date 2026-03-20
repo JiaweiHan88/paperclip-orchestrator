@@ -1,0 +1,86 @@
+{#-jinja2: trim_blocks: True, lstrip_blocks: True #}
+## INFORMATION FROM THE GITHUB ISSUE:
+
+**Issue title:**  
+{{ structured_issue_data.issue.title }}
+
+**Labels:**  
+{%- if structured_issue_data.issue.labels %}
+{%- for label in structured_issue_data.issue.labels %}
+{{ label.name or "N/A" }}  
+{%- endfor %}
+{%- else %}
+_No labels provided._  
+{%- endif %}
+
+**Issue body:**  
+{%- if structured_issue_data.issue.body %}
+{{ structured_issue_data.issue.body.strip() }}  
+{%- else %}
+_No issue body provided._  
+{%- endif %}
+
+**Comments:**  
+{%- if structured_issue_data.issue.comments %}
+{%- for comment in structured_issue_data.issue.comments %}
+{%- set body_lines = comment.body.strip().splitlines() %}
+- Author commented on **{{ comment.created_at }}**:  
+{%- for line in body_lines %}
+    {{ line }}  
+{%- endfor %}
+{%- endfor %}
+{%- else %}
+_No comments provided._  
+{%- endif %}
+
+**Image links:**  
+{%- if structured_issue_data.images %}
+{%- for image_url in structured_issue_data.images %}
+- {{ image_url }}  
+{%- endfor %}
+{%- else %}
+_No images provided._  
+{%- endif %}
+
+**Linked PRs:**  
+{%- if structured_issue_data.linked_prs %}
+{%- for pr in structured_issue_data.linked_prs %}
+- #{{ pr.number }} - {{ pr.url }} - {{ pr.title }} - {% if pr.merged %}(merged){% else %}(merged N/A){% endif %}  
+{%- endfor %}
+{%- else %}
+_No linked PRs._  
+{%- endif %}
+
+**Grouped Links by Domain:**  
+{%- for domain, links in structured_issue_data.grouped_links.items() %}
+- **{{ domain }}**
+    {%- for link in links %}
+    - {{ link }}  
+    {%- endfor %}
+{%- endfor %}
+
+**Referenced Events:**  
+{%- set referenced_events = structured_issue_data.issue.timeline_items | selectattr('__class__.__name__', 'equalto', 'ReferencedEvent') | list %}
+{%- if referenced_events %}
+{%- for event in referenced_events %}
+- **Type**: Commit  
+  - **message**: {{ event.commit.message.strip() }}  
+  - **oid**: {{ event.commit.oid }}  
+  - **Date**: {{ event.created_at }}  
+{%- endfor %}
+{%- else %}
+_No referenced events found._  
+{%- endif %}
+
+**Cross Referenced Events:**  
+{%- set cross_events = structured_issue_data.issue.timeline_items | selectattr('__class__.__name__', 'equalto', 'CrossReferencedEvent') | list %}
+{%- if cross_events %}
+{%- for event in cross_events %}
+- **Type**: {{ event.source.typename if event.source and event.source.typename else 'Unknown' }}  
+  - **Title**: {{ event.source.title }}  
+  - **URL**: {{ event.source.url if event.source and event.source.url else 'N/A' }}  
+  - **Date**: {{ event.created_at }}  
+{%- endfor %}
+{%- else %}
+_No cross-referenced events found._  
+{%- endif %}

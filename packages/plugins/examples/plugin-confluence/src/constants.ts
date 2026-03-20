@@ -29,5 +29,19 @@ export const WEBHOOK_KEYS = {
 } as const;
 
 export const TOOL_NAMES = {
-  // Tools will be defined in a future pass.
+  // ── Read-only (LOW risk) ─────────────────────────────────────────────────
+  getConfluencePageById: "get_confluence_page_by_id",
+  getConfluencePageByTitle: "get_confluence_page_by_title",
+  getConfluencePageByIdHtml: "get_confluence_page_by_id_html",
+  getConfluencePageByTitleHtml: "get_confluence_page_by_title_html",
+  searchConfluenceWithCql: "search_confluence_with_cql",
+  searchConfluencePagesFreetext: "search_confluence_pages_freetext",
+  getConfluenceSpaces: "get_confluence_spaces",
+  getConfluencePageTree: "get_confluence_page_tree",
+  // ── Medium risk ──────────────────────────────────────────────────────────
+  createConfluencePage: "create_confluence_page",
+  addConfluenceComment: "add_confluence_comment",
+  // ── High risk ────────────────────────────────────────────────────────────
+  updateConfluencePage: "update_confluence_page",
+  relocateConfluencePage: "relocate_confluence_page",
 } as const;

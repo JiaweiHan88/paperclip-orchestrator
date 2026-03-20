@@ -6,6 +6,7 @@ import {
   PLUGIN_ID,
   PLUGIN_VERSION,
   SLOT_IDS,
+  TOOL_NAMES,
   WEBHOOK_KEYS,
 } from "./constants.js";
 
@@ -109,7 +110,33 @@ const manifest: PaperclipPluginManifestV1 = {
     },
   ],
   tools: [
-    // Tools will be declared in a future pass.
+    // ── Read-only (LOW risk) ──────────────────────────────────────────────
+    { name: TOOL_NAMES.queryChanges, displayName: "Query Changes", description: "Search Gerrit changes by query string.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.queryChangesByDate, displayName: "Query Changes by Date", description: "Search Gerrit changes filtered by date range.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getMostRecentCl, displayName: "Get Most Recent CL", description: "Get the most recent change (CL) for a query.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getChangeDetails, displayName: "Get Change Details", description: "Get detailed metadata for a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.changesSubmittedTogether, displayName: "Changes Submitted Together", description: "Get changes that were submitted in the same submission.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.listChangeComments, displayName: "List Change Comments", description: "List all review comments on a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getCommitMessage, displayName: "Get Commit Message", description: "Get the commit message for a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getBugsFromCl, displayName: "Get Bugs from CL", description: "Extract bug/issue references from a Gerrit change's commit message.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getFileContent, displayName: "Get File Content", description: "Read a file from a Gerrit change at a specific revision.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.listChangeFiles, displayName: "List Change Files", description: "List files modified in a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getChangeDiff, displayName: "Get Change Diff", description: "Get the full diff for a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getFileDiff, displayName: "Get File Diff", description: "Get the diff for a single file in a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.getProjectBranches, displayName: "Get Project Branches", description: "List branches for a Gerrit project.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.suggestReviewers, displayName: "Suggest Reviewers", description: "Suggest reviewers for a Gerrit change.", parametersSchema: { type: "object" } },
+    // ── Medium risk ───────────────────────────────────────────────────────
+    { name: TOOL_NAMES.addReviewer, displayName: "Add Reviewer", description: "Add a reviewer to a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.postReviewComment, displayName: "Post Review Comment", description: "Post an inline review comment on a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.setReadyForReview, displayName: "Set Ready for Review", description: "Mark a Gerrit change as ready for review.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.setWorkInProgress, displayName: "Set Work In Progress", description: "Mark a Gerrit change as work in progress.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.setTopic, displayName: "Set Topic", description: "Set the topic for a Gerrit change.", parametersSchema: { type: "object" } },
+    // ── High risk ─────────────────────────────────────────────────────────
+    { name: TOOL_NAMES.createChange, displayName: "Create Change", description: "Create a new Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.abandonChange, displayName: "Abandon Change", description: "Abandon a Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.revertChange, displayName: "Revert Change", description: "Revert a submitted Gerrit change.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.revertSubmission, displayName: "Revert Submission", description: "Revert an entire Gerrit submission.", parametersSchema: { type: "object" } },
+    { name: TOOL_NAMES.setReview, displayName: "Set Review", description: "Submit review scores and labels on a Gerrit change.", parametersSchema: { type: "object" } },
   ],
   ui: {
     slots: [

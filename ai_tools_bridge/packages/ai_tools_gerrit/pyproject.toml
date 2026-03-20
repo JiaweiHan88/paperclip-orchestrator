@@ -1,0 +1,72 @@
+[project]
+name = "ai-tools-gerrit"
+version = "0.1.0"
+description = "AI tools for Gerrit code review operations"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12.0",
+    "requests>=2.32.4",
+    "ai_tools_base",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# [tool.hatch.build.hooks.custom]
+# path = "hatch_build.py"
+
+# [tool.hatch.version]
+# source = "uv-dynamic-versioning"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=1.2.0",
+    "ruff>=0.1.0",
+    "pytest-cov>=4.0.0",
+    "types-requests>=2.31.0",
+    "pyright>=1.1.405",
+]
+
+[tool.uv.sources]
+ai_tools_base = { path = "../ai_tools_base", editable = true }
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "--cov=src --cov-report=term-missing"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.pyright]
+include = ["src"]
+exclude = ["hatch_build.py"]
+typeCheckingMode = "strict"
+deprecateTypingAliases = true
+reportDeprecated = "error"
+reportMissingTypeStubs = false
+
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+name = "pypi"
+default = true

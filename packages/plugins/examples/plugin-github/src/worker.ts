@@ -6,6 +6,7 @@ import type {
   PluginJobContext,
   PluginWebhookInput,
 } from "@paperclipai/plugin-sdk";
+import { createBridgeClient } from "@paperclipai/adapter-utils";
 import { JOB_KEYS, WEBHOOK_KEYS } from "./constants.js";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ type GitHubConfig = {
 };
 
 let currentContext: PluginContext | null = null;
+let currentBridgeUrl: string = "http://ai-tools-bridge:8000";
 
 async function getConfig(ctx: PluginContext): Promise<GitHubConfig> {
   const raw = await ctx.config.get();
@@ -93,8 +95,57 @@ const plugin: PaperclipPlugin = definePlugin({
       return { ok: true };
     });
 
-    // ----- Tools (declared later) ----------------------------------------
-    // Tools will be registered in a future pass via ctx.tools.register().
+    // ----- Tools --------------------------------------------------------
+    // Auto-register all tools from the Python bridge at startup.
+    const bridgeUrl = process.env.AI_TOOLS_BRIDGE_URL ?? "http://ai-tools-bridge:8000";
+    currentBridgeUrl = bridgeUrl;
+    const bridge = createBridgeClient(bridgeUrl, "github");
+
+    try {
+      const tools = await bridge.getToolManifest();
+
+      for (const tool of tools) {
+        ctx.tools.register(
+          tool.name,
+          {
+            displayName: tool.display_name,
+            description: tool.description,
+            parametersSchema: tool.parameters_schema,
+          },
+          async (params, _runCtx) => {
+            const config = await getConfig(ctx);
+            const credentials: Record<string, unknown> = {};
+
+            if (config.githubTokenSecretRef) {
+              try {
+                const token = await ctx.secrets.resolve(config.githubTokenSecretRef);
+                credentials["token"] = token;
+              } catch {
+                ctx.logger.warn("github: failed to resolve token secret", {
+                  ref: config.githubTokenSecretRef,
+                });
+              }
+            }
+            if (config.githubApiBaseUrl) {
+              credentials["api_base_url"] = config.githubApiBaseUrl;
+            }
+
+            const result = await bridge.execute(tool.name, params as Record<string, unknown>, credentials);
+            if (result.error) {
+              return { error: result.error };
+            }
+            return { content: result.content, data: result.data };
+          },
+        );
+      }
+
+      ctx.logger.info("github plugin: registered tools from bridge", { count: tools.length, bridgeUrl });
+    } catch (err) {
+      ctx.logger.warn("github plugin: bridge unavailable at startup — tools not registered", {
+        bridgeUrl,
+        error: (err as Error).message,
+      });
+    }
 
     ctx.logger.info("github plugin setup complete");
   },
@@ -119,12 +170,18 @@ const plugin: PaperclipPlugin = definePlugin({
     if (!ctx) return { status: "degraded", message: "GitHub plugin not yet initialized" };
     const config = await getConfig(ctx);
     const configured = !!config.githubTokenSecretRef;
-    return {
-      status: configured ? "ok" : "degraded",
-      message: configured
-        ? "GitHub plugin configured and ready"
-        : "GitHub plugin loaded but not configured — set token in settings",
-    };
+
+    // Probe the Python bridge for liveness
+    const bridge = createBridgeClient(currentBridgeUrl, "github");
+    const bridgeOk = await bridge.isHealthy();
+
+    if (!configured) {
+      return { status: "degraded", message: "GitHub plugin loaded but not configured — set token in settings" };
+    }
+    if (!bridgeOk) {
+      return { status: "degraded", message: `GitHub plugin configured but AI tools bridge is unreachable at ${currentBridgeUrl}` };
+    }
+    return { status: "ok", message: "GitHub plugin configured and ready" };
   },
 });
 

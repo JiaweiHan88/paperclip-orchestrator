@@ -29,5 +29,18 @@ export const WEBHOOK_KEYS = {
 } as const;
 
 export const TOOL_NAMES = {
-  // Tools will be defined in a future pass.
+  // ── Read-only (LOW risk) ─────────────────────────────────────────────────
+  getJiraIssue: "get_jira_issue",
+  downloadJiraAttachment: "download_jira_attachment",
+  searchJira: "search_jira",
+  getJiraPullRequests: "get_jira_pull_requests",
+  getJiraFields: "get_jira_fields",
+  getJiraTransitions: "get_jira_transitions",
+  // ── Medium risk ──────────────────────────────────────────────────────────
+  createJiraTicket: "create_jira_ticket",
+  addJiraComment: "add_jira_comment",
+  transitionJiraIssue: "transition_jira_issue",
+  linkJiraIssues: "link_jira_issues",
+  // ── High risk ────────────────────────────────────────────────────────────
+  updateJiraTicket: "update_jira_ticket",
 } as const;
