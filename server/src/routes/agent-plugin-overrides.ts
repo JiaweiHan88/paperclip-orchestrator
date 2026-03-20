@@ -51,7 +51,7 @@ export function agentPluginOverrideRoutes(db: Db, deps: AgentPluginOverrideRoute
    */
   router.get("/agents/:agentId/plugin-overrides", async (req, res) => {
     const agent = await resolveAgent(req, req.params.agentId);
-    const overrides = await svc.listForAgent(agent.id);
+    const overrides = await svc.listForAgent(agent.id, deps.toolDispatcher);
     res.json(overrides);
   });
 
