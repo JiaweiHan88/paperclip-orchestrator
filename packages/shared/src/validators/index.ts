@@ -212,4 +212,6 @@ export {
   type PluginStateScopeKey,
   type SetPluginState,
   type ListPluginState,
+  upsertAgentPluginOverrideSchema,
+  type UpsertAgentPluginOverride,
 } from "./plugin.js";

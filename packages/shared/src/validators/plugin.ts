@@ -668,3 +668,25 @@ export const listPluginStateSchema = z.object({
 });
 
 export type ListPluginState = z.infer<typeof listPluginStateSchema>;
+
+// ---------------------------------------------------------------------------
+// Agent-level plugin overrides
+// ---------------------------------------------------------------------------
+
+/**
+ * Schema for creating or updating an agent-level plugin override.
+ *
+ * @see doc/plans/2026-03-20-agent-plugin-configuration.md
+ */
+export const upsertAgentPluginOverrideSchema = z.object({
+  /** Master switch — when false the entire plugin is disabled for this agent. */
+  enabled: z.boolean(),
+  /**
+   * Per-tool overrides keyed by namespaced tool name.
+   * `null` or omitted means "all tools enabled".
+   */
+  toolOverrides: z.record(z.boolean()).nullable().optional(),
+});
+
+export type UpsertAgentPluginOverride = z.infer<typeof upsertAgentPluginOverrideSchema>;
+
