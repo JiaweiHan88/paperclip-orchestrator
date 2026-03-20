@@ -529,6 +529,8 @@ export {
   type PluginStateScopeKey,
   type SetPluginState,
   type ListPluginState,
+  upsertAgentPluginOverrideSchema,
+  type UpsertAgentPluginOverride,
 } from "./validators/index.js";
 
 export { API_PREFIX, API } from "./api.js";
