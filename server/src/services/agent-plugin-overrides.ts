@@ -12,6 +12,7 @@ import { and, eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { agentPluginOverrides, plugins } from "@paperclipai/db";
 import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PluginToolDispatcher } from "./plugin-tool-dispatcher.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,8 +48,12 @@ export function agentPluginOverrideService(db: Db) {
    * Returns one entry per installed plugin (in `ready` status), regardless
    * of whether an explicit override row exists. If no override exists the
    * plugin defaults to `enabled: true, toolOverrides: null`.
+   *
+   * When a `toolDispatcher` is provided, the live tool registry is used as
+   * the source of truth for `declaredTools`. This handles plugins that
+   * register tools dynamically at runtime (e.g. bridge connector plugins).
    */
-  async function listForAgent(agentId: string): Promise<AgentPluginOverrideRecord[]> {
+  async function listForAgent(agentId: string, toolDispatcher?: PluginToolDispatcher): Promise<AgentPluginOverrideRecord[]> {
     // 1. Get all ready plugins
     const readyPlugins = await db
       .select()
@@ -69,11 +74,34 @@ export function agentPluginOverrideService(db: Db) {
     return readyPlugins.map((plugin) => {
       const manifest = plugin.manifestJson as PaperclipPluginManifestV1 | null;
       const override = overrideMap.get(plugin.id);
-      const tools: DeclaredTool[] = (manifest?.tools ?? []).map((t) => ({
-        name: `${manifest!.id}:${t.name}`,
-        displayName: t.displayName,
-        description: t.description,
-      }));
+
+      // Prefer the live tool registry when a dispatcher is available —
+      // dynamic tools (registered by workers at runtime) are only in the
+      // registry, not in the stored manifest.
+      let tools: DeclaredTool[];
+      if (toolDispatcher) {
+        const liveTools = toolDispatcher.getRegistry().listTools({ pluginId: plugin.pluginKey });
+        if (liveTools.length > 0) {
+          tools = liveTools.map((t) => ({
+            name: t.namespacedName,
+            displayName: t.displayName,
+            description: t.description,
+          }));
+        } else {
+          // Fall back to manifest for plugins not yet registered in live registry
+          tools = (manifest?.tools ?? []).map((t) => ({
+            name: `${manifest!.id}:${t.name}`,
+            displayName: t.displayName,
+            description: t.description,
+          }));
+        }
+      } else {
+        tools = (manifest?.tools ?? []).map((t) => ({
+          name: `${manifest!.id}:${t.name}`,
+          displayName: t.displayName,
+          description: t.description,
+        }));
+      }
 
       return {
         pluginId: plugin.id,
