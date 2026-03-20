@@ -783,6 +783,15 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
           fn: (params: unknown, runCtx: ToolRunContext) => Promise<ToolResult>,
         ): void {
           toolHandlers.set(name, { declaration, fn });
+          // Notify the host so it can update its server-side tool registry.
+          // This is fire-and-forget — the host ignores unknown notifications gracefully.
+          const allTools = Array.from(toolHandlers.entries()).map(([toolName, entry]) => ({
+            name: toolName,
+            displayName: entry.declaration.displayName,
+            description: entry.declaration.description,
+            parametersSchema: entry.declaration.parametersSchema,
+          }));
+          notifyHost("tools.register", { tools: allTools });
         },
       },
 

@@ -1724,6 +1724,15 @@ export function pluginLoader(
       // ------------------------------------------------------------------
       // 4. Spawn worker process
       // ------------------------------------------------------------------
+
+      // Forward AI_TOOLS_BRIDGE_URL so plugin workers can reach the bridge
+      // regardless of whether we're running in Docker (ai-tools-bridge:8000)
+      // or natively (localhost:8000).
+      const workerEnv: Record<string, string> = {};
+      if (process.env.AI_TOOLS_BRIDGE_URL) {
+        workerEnv.AI_TOOLS_BRIDGE_URL = process.env.AI_TOOLS_BRIDGE_URL;
+      }
+
       const workerOptions: WorkerStartOptions = {
         entrypointPath: workerEntrypoint,
         manifest,
@@ -1732,6 +1741,25 @@ export function pluginLoader(
         apiVersion: manifest.apiVersion,
         hostHandlers,
         autoRestart: true,
+        env: workerEnv,
+        onToolsNotification(tools) {
+          // Worker registered tools dynamically at runtime (e.g. from bridge).
+          // Build a synthetic manifest fragment and push it into the dispatcher.
+          const syntheticManifest = {
+            ...manifest,
+            tools: tools.map((t) => ({
+              name: t.name,
+              displayName: t.displayName,
+              description: t.description,
+              parametersSchema: t.parametersSchema,
+            })),
+          };
+          toolDispatcher.registerPluginTools(pluginKey, syntheticManifest);
+          log.info(
+            { pluginId, pluginKey, tools: tools.length },
+            "plugin-loader: agent tools registered (dynamic, from worker)",
+          );
+        },
       };
 
       // Repo-local plugin installs can resolve workspace TS sources at runtime
