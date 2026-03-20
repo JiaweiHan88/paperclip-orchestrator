@@ -13,6 +13,8 @@ export const queryKeys = {
     configRevisions: (agentId: string) => ["agents", "config-revisions", agentId] as const,
     adapterModels: (companyId: string, adapterType: string) =>
       ["agents", companyId, "adapter-models", adapterType] as const,
+    pluginOverrides: (agentId: string) => ["agents", agentId, "plugin-overrides"] as const,
+    availableTools: (agentId: string) => ["agents", agentId, "available-tools"] as const,
   },
   issues: {
     list: (companyId: string) => ["issues", companyId] as const,
