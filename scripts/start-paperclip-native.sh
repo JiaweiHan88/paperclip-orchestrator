@@ -88,6 +88,33 @@ export SERVE_UI=true
 export PAPERCLIP_DEPLOYMENT_MODE=local_trusted
 export PAPERCLIP_HOME="${PAPERCLIP_HOME:-/tmp/paperclip-native}"
 export PAPERCLIP_INSTANCE_ID=default
+# Point plugin workers to the locally running AI tools bridge (not the Docker hostname)
+export AI_TOOLS_BRIDGE_URL="${AI_TOOLS_BRIDGE_URL:-http://localhost:8000}"
+
+# ── Start AI tools bridge (if not already running) ────────────────────────
+if ! curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+  BRIDGE_DIR="$PAPERCLIP_REPO/ai_tools_bridge"
+  if [ -d "$BRIDGE_DIR/.venv" ]; then
+    echo "🐍 Starting AI tools bridge..."
+    nohup "$BRIDGE_DIR/.venv/bin/python" -m ai_tools_bridge \
+      > /tmp/ai-tools-bridge.log 2>&1 &
+    BRIDGE_PID=$!
+    for i in $(seq 1 15); do
+      if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
+        echo "   ✅ AI tools bridge ready (PID=$BRIDGE_PID)"
+        break
+      fi
+      if [ "$i" -eq 15 ]; then
+        echo "   ⚠️  AI tools bridge not ready — plugin tools will retry in the background"
+      fi
+      sleep 1
+    done
+  else
+    echo "   ⚠️  ai_tools_bridge/.venv not found — run 'cd ai_tools_bridge && uv sync' to enable plugin tools"
+  fi
+else
+  echo "   ✅ AI tools bridge already running"
+fi
 
 # ── Start server ──────────────────────────────────────────────────────────
 cd "$PAPERCLIP_REPO"
