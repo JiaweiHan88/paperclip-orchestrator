@@ -6,8 +6,11 @@ import {
   type AgentKey,
   type ClaudeLoginResult,
   type AgentPermissionUpdate,
+  type AvailableSkill,
 } from "../api/agents";
 import { companySkillsApi } from "../api/companySkills";
+import { agentPluginOverridesApi, type AgentPluginOverrideRecord } from "../api/agent-plugin-overrides";
+import { AgentPluginGraph } from "../components/agent-plugin-graph";
 import { budgetsApi } from "../api/budgets";
 import { heartbeatsApi } from "../api/heartbeats";
 import { instanceSettingsApi } from "../api/instanceSettings";
@@ -221,12 +224,13 @@ function scrollToContainerBottom(container: ScrollContainer, behavior: ScrollBeh
   container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
-type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "runs" | "budget";
+type AgentDetailView = "dashboard" | "instructions" | "configuration" | "skills" | "plugins" | "runs" | "budget";
 
 function parseAgentDetailView(value: string | null): AgentDetailView {
   if (value === "instructions" || value === "prompts") return "instructions";
   if (value === "configure" || value === "configuration") return "configuration";
   if (value === "skills") return "skills";
+  if (value === "plugins") return "plugins";
   if (value === "budget") return "budget";
   if (value === "runs") return value;
   return "dashboard";
@@ -647,6 +651,8 @@ export function AgentDetail() {
           ? "configuration"
           : activeView === "skills"
             ? "skills"
+            : activeView === "plugins"
+              ? "plugins"
             : activeView === "runs"
               ? "runs"
               : activeView === "budget"
@@ -912,6 +918,7 @@ export function AgentDetail() {
               { value: "instructions", label: "Instructions" },
               { value: "skills", label: "Skills" },
               { value: "configuration", label: "Configuration" },
+              { value: "plugins", label: "Plugins" },
               { value: "runs", label: "Runs" },
               { value: "budget", label: "Budget" },
             ]}
@@ -1025,6 +1032,10 @@ export function AgentDetail() {
           agent={agent}
           companyId={resolvedCompanyId ?? undefined}
         />
+      )}
+
+      {activeView === "plugins" && (
+        <PluginsTab agent={agent} />
       )}
 
       {activeView === "runs" && (
@@ -3994,5 +4005,113 @@ function KeysTab({ agentId, companyId }: { agentId: string; companyId?: string }
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PluginsTab — per-agent plugin/tool override management with force graph
+// ---------------------------------------------------------------------------
+
+function PluginsTab({ agent }: { agent: Agent }) {
+  const queryClient = useQueryClient();
+
+  const { data: overrides = [], isLoading } = useQuery({
+    queryKey: queryKeys.agents.pluginOverrides(agent.id),
+    queryFn: () => agentPluginOverridesApi.list(agent.id),
+  });
+
+  const upsertMutation = useMutation({
+    mutationFn: (vars: {
+      pluginId: string;
+      enabled: boolean;
+      toolOverrides?: Record<string, boolean> | null;
+    }) =>
+      agentPluginOverridesApi.upsert(agent.id, vars.pluginId, {
+        enabled: vars.enabled,
+        toolOverrides: vars.toolOverrides,
+      }),
+    onMutate: async (vars) => {
+      const key = queryKeys.agents.pluginOverrides(agent.id);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<AgentPluginOverrideRecord[]>(key);
+      queryClient.setQueryData<AgentPluginOverrideRecord[]>(key, (old) =>
+        (old ?? []).map((o) =>
+          o.pluginId === vars.pluginId
+            ? {
+                ...o,
+                enabled: vars.enabled,
+                toolOverrides: vars.toolOverrides !== undefined ? vars.toolOverrides ?? o.toolOverrides : o.toolOverrides,
+              }
+            : o,
+        ),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.agents.pluginOverrides(agent.id),
+          context.previous,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.agents.pluginOverrides(agent.id),
+      });
+    },
+  });
+
+  const handleTogglePlugin = useCallback(
+    (pluginId: string, enabled: boolean) => {
+      const existing = overrides.find((o) => o.pluginId === pluginId);
+      upsertMutation.mutate({
+        pluginId,
+        enabled,
+        toolOverrides: existing?.toolOverrides,
+      });
+    },
+    [overrides, upsertMutation],
+  );
+
+  const handleToggleTool = useCallback(
+    (pluginId: string, toolName: string, enabled: boolean) => {
+      const existing = overrides.find((o) => o.pluginId === pluginId);
+      const currentOverrides = existing?.toolOverrides ?? {};
+      upsertMutation.mutate({
+        pluginId,
+        enabled: existing?.enabled ?? true,
+        toolOverrides: { ...currentOverrides, [toolName]: enabled },
+      });
+    },
+    [overrides, upsertMutation],
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        Loading plugin overrides…
+      </div>
+    );
+  }
+
+  if (overrides.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+        <p className="text-lg font-medium">No plugins installed</p>
+        <p className="text-sm">Install plugins to configure per-agent access here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <AgentPluginGraph
+      agentId={agent.id}
+      agentName={agent.name}
+      agentIcon={agent.icon}
+      overrides={overrides}
+      onTogglePlugin={handleTogglePlugin}
+      onToggleTool={handleToggleTool}
+    />
   );
 }
