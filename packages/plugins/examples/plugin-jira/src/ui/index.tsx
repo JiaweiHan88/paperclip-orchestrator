@@ -83,7 +83,7 @@ export function JiraDashboardWidget({ context }: PluginWidgetProps) {
 // ---------------------------------------------------------------------------
 
 export function JiraSidebarLink(_props: PluginSidebarProps) {
-  return <span>Jira</span>;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

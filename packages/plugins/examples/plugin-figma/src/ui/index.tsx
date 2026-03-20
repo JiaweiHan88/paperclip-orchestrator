@@ -83,7 +83,7 @@ export function FigmaDashboardWidget({ context }: PluginWidgetProps) {
 // ---------------------------------------------------------------------------
 
 export function FigmaSidebarLink(_props: PluginSidebarProps) {
-  return <span>Figma</span>;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

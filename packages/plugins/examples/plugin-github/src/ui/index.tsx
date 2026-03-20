@@ -83,7 +83,7 @@ export function GitHubDashboardWidget({ context }: PluginWidgetProps) {
 // ---------------------------------------------------------------------------
 
 export function GitHubSidebarLink(_props: PluginSidebarProps) {
-  return <span>GitHub</span>;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

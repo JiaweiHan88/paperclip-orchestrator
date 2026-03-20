@@ -83,7 +83,7 @@ export function GerritDashboardWidget({ context }: PluginWidgetProps) {
 // ---------------------------------------------------------------------------
 
 export function GerritSidebarLink(_props: PluginSidebarProps) {
-  return <span>Gerrit</span>;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
