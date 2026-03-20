@@ -181,6 +181,12 @@ export interface WorkerStartOptions {
    * The host wires this to the PluginStreamBus to fan out events to SSE clients.
    */
   onStreamNotification?: (method: string, params: Record<string, unknown>) => void;
+  /**
+   * Callback invoked when the worker dynamically registers tools at runtime
+   * (e.g. after querying a remote tool manifest). The host wires this to the
+   * PluginToolDispatcher so the server-side registry stays in sync.
+   */
+  onToolsNotification?: (tools: Array<{ name: string; displayName: string; description: string; parametersSchema: Record<string, unknown> }>) => void;
 }
 
 /**
@@ -596,12 +602,28 @@ export function createPluginWorkerHandle(
       return;
     }
 
+    // Dynamic tool registration from worker at runtime
+    if (notification.method === "tools.register") {
+      if (options.onToolsNotification) {
+        const params = (notification.params ?? {}) as { tools?: unknown };
+        if (Array.isArray(params.tools)) {
+          try {
+            options.onToolsNotification(
+              params.tools as Array<{ name: string; displayName: string; description: string; parametersSchema: Record<string, unknown> }>,
+            );
+          } catch (err) {
+            log.error(
+              { err: err instanceof Error ? err.message : String(err) },
+              "tools.register notification handler failed",
+            );
+          }
+        }
+      }
+      return;
+    }
+
     log.debug({ method: notification.method }, "received notification from worker");
   }
-
-  // -----------------------------------------------------------------------
-  // Process lifecycle
-  // -----------------------------------------------------------------------
 
   function spawnProcess(): ChildProcess {
     // Security: Do NOT spread process.env into the worker. Plugins should only
