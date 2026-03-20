@@ -87,7 +87,7 @@ export function ConfluenceDashboardWidget({ context }: PluginWidgetProps) {
 // ---------------------------------------------------------------------------
 
 export function ConfluenceSidebarLink(_props: PluginSidebarProps) {
-  return <span>Confluence</span>;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
