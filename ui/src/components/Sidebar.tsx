@@ -52,7 +52,7 @@ export function Sidebar() {
   return (
     <aside className="h-full min-h-0 border-r border-border bg-background flex flex-col w-full overflow-hidden">
       {/* Top bar */}
-      <div className={`flex items-center gap-1 px-3 h-12 shrink-0 ${isCollapsed ? "justify-center px-0" : ""}`}>
+      <div className={`flex items-center gap-1 h-12 shrink-0 w-full ${isCollapsed ? "justify-center px-0" : "px-3"}`}>
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -90,7 +90,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 py-2">
+      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 py-2 w-full">
         <div className="flex flex-col gap-0.5 w-full">
           {/* New Issue button */}
           {isCollapsed ? (
@@ -108,7 +108,7 @@ export function Sidebar() {
           ) : (
             <button
               onClick={() => openNewIssue()}
-              className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+              className="flex items-center gap-2.5 px-3 py-2 w-full text-[13px] font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
             >
               <SquarePen className="h-4 w-4 shrink-0" />
               <span className="truncate">New Issue</span>
@@ -154,13 +154,15 @@ export function Sidebar() {
           <SidebarNavItem to="/company/settings" label="Settings" icon={Settings} />
         </SidebarSection>
 
-        <PluginSlotOutlet
-          slotTypes={["sidebarPanel"]}
-          context={pluginContext}
-          className="flex flex-col gap-3"
-          itemClassName="rounded-lg border border-border p-3"
-          missingBehavior="hidden"
-        />
+        {!isCollapsed && (
+          <PluginSlotOutlet
+            slotTypes={["sidebarPanel"]}
+            context={pluginContext}
+            className="flex flex-col gap-3"
+            itemClassName="rounded-lg border border-border p-3"
+            missingBehavior="hidden"
+          />
+        )}
       </nav>
     </aside>
   );
