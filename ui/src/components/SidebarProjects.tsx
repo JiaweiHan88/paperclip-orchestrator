@@ -36,6 +36,7 @@ function SortableProjectItem({
   companyId,
   companyPrefix,
   isMobile,
+  isCollapsed,
   project,
   projectSidebarSlots,
   setSidebarOpen,
@@ -44,6 +45,7 @@ function SortableProjectItem({
   companyId: string | null;
   companyPrefix: string | null;
   isMobile: boolean;
+  isCollapsed: boolean;
   project: Project;
   projectSidebarSlots: ProjectSidebarSlot[];
   setSidebarOpen: (open: boolean) => void;
@@ -78,7 +80,8 @@ function SortableProjectItem({
             if (isMobile) setSidebarOpen(false);
           }}
           className={cn(
-            "flex items-center gap-2.5 px-3 py-1.5 text-[13px] font-medium transition-colors",
+            "flex items-center gap-2.5 py-1.5 text-[13px] font-medium transition-colors",
+            isCollapsed ? "justify-center px-0 w-full" : "px-3",
             activeProjectRef === routeRef || activeProjectRef === project.id
               ? "bg-accent text-foreground"
               : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
@@ -88,8 +91,12 @@ function SortableProjectItem({
             className="shrink-0 h-3.5 w-3.5 rounded-sm"
             style={{ backgroundColor: project.color ?? "#6366f1" }}
           />
-          <span className="flex-1 truncate">{project.name}</span>
-          {project.pauseReason === "budget" ? <BudgetSidebarMarker title="Project paused by budget" /> : null}
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 truncate">{project.name}</span>
+              {project.pauseReason === "budget" ? <BudgetSidebarMarker title="Project paused by budget" /> : null}
+            </>
+          )}
         </NavLink>
         {projectSidebarSlots.length > 0 && (
           <div className="ml-5 flex flex-col gap-0.5">
@@ -119,7 +126,7 @@ export function SidebarProjects() {
   const [open, setOpen] = useState(true);
   const { selectedCompany, selectedCompanyId } = useCompany();
   const { openNewProject } = useDialog();
-  const { isMobile, setSidebarOpen } = useSidebar();
+  const { isMobile, setSidebarOpen, isCollapsed } = useSidebar();
   const location = useLocation();
 
   const { data: projects } = useQuery({
@@ -174,8 +181,11 @@ export function SidebarProjects() {
   );
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="group">
+    <Collapsible open={open && !isCollapsed} onOpenChange={setOpen}>
+      <div className="group w-full">
+        {isCollapsed ? (
+          <div className="border-t border-border/50 mx-2 my-1" />
+        ) : (
         <div className="flex items-center px-3 py-1.5">
           <CollapsibleTrigger className="flex items-center gap-1 flex-1 min-w-0">
             <ChevronRight
@@ -199,6 +209,7 @@ export function SidebarProjects() {
             <Plus className="h-3 w-3" />
           </button>
         </div>
+        )}
       </div>
 
       <CollapsibleContent>
@@ -219,6 +230,7 @@ export function SidebarProjects() {
                   companyId={selectedCompanyId}
                   companyPrefix={selectedCompany?.issuePrefix ?? null}
                   isMobile={isMobile}
+                  isCollapsed={isCollapsed}
                   project={project}
                   projectSidebarSlots={projectSidebarSlots}
                   setSidebarOpen={setSidebarOpen}

@@ -19,15 +19,18 @@ import { SidebarProjects } from "./SidebarProjects";
 import { SidebarAgents } from "./SidebarAgents";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
+import { useSidebar } from "../context/SidebarContext";
 import { heartbeatsApi } from "../api/heartbeats";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { PluginSlotOutlet } from "@/plugins/slots";
 
 export function Sidebar() {
   const { openNewIssue } = useDialog();
   const { selectedCompanyId, selectedCompany } = useCompany();
+  const { isCollapsed } = useSidebar();
   const inboxBadge = useInboxBadge(selectedCompanyId);
   const { data: liveRuns } = useQuery({
     queryKey: queryKeys.liveRuns(selectedCompanyId!),
@@ -47,38 +50,70 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-60 h-full min-h-0 border-r border-border bg-background flex flex-col">
-      {/* Top bar: Company name (bold) + Search — aligned with top sections (no visible border) */}
-      <div className="flex items-center gap-1 px-3 h-12 shrink-0">
-        {selectedCompany?.brandColor && (
-          <div
-            className="w-4 h-4 rounded-sm shrink-0 ml-1"
-            style={{ backgroundColor: selectedCompany.brandColor }}
-          />
+    <aside className="h-full min-h-0 border-r border-border bg-background flex flex-col w-full overflow-hidden">
+      {/* Top bar */}
+      <div className={`flex items-center gap-1 px-3 h-12 shrink-0 ${isCollapsed ? "justify-center px-0" : ""}`}>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground shrink-0"
+                onClick={openSearch}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Search</TooltipContent>
+          </Tooltip>
+        ) : (
+          <>
+            {selectedCompany?.brandColor && (
+              <div
+                className="w-4 h-4 rounded-sm shrink-0 ml-1"
+                style={{ backgroundColor: selectedCompany.brandColor }}
+              />
+            )}
+            <span className="flex-1 text-sm font-bold text-foreground truncate pl-1">
+              {selectedCompany?.name ?? "Select company"}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground shrink-0"
+              onClick={openSearch}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </>
         )}
-        <span className="flex-1 text-sm font-bold text-foreground truncate pl-1">
-          {selectedCompany?.name ?? "Select company"}
-        </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="text-muted-foreground shrink-0"
-          onClick={openSearch}
-        >
-          <Search className="h-4 w-4" />
-        </Button>
       </div>
 
-      <nav className="flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 px-3 py-2">
-        <div className="flex flex-col gap-0.5">
-          {/* New Issue button aligned with nav items */}
-          <button
-            onClick={() => openNewIssue()}
-            className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-          >
-            <SquarePen className="h-4 w-4 shrink-0" />
-            <span className="truncate">New Issue</span>
-          </button>
+      <nav className={`flex-1 min-h-0 overflow-y-auto scrollbar-auto-hide flex flex-col gap-4 py-2 ${isCollapsed ? "px-0 items-center" : "px-3"}`}>
+        <div className="flex flex-col gap-0.5 w-full">
+          {/* New Issue button */}
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => openNewIssue()}
+                  className="flex items-center justify-center w-full px-0 py-2 text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+                >
+                  <SquarePen className="h-4 w-4 shrink-0" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">New Issue</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => openNewIssue()}
+              className="flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+            >
+              <SquarePen className="h-4 w-4 shrink-0" />
+              <span className="truncate">New Issue</span>
+            </button>
+          )}
           <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
           <SidebarNavItem
             to="/inbox"

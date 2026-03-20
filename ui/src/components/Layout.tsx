@@ -20,6 +20,7 @@ import { useDialog } from "../context/DialogContext";
 import { usePanel } from "../context/PanelContext";
 import { useCompany } from "../context/CompanyContext";
 import { useSidebar } from "../context/SidebarContext";
+import { SIDEBAR_COLLAPSE_THRESHOLD, SIDEBAR_ICON_WIDTH, SIDEBAR_DEFAULT_WIDTH } from "../context/SidebarContext";
 import { useTheme } from "../context/ThemeContext";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useCompanyPageMemory } from "../hooks/useCompanyPageMemory";
@@ -47,7 +48,7 @@ function readRememberedInstanceSettingsPath(): string {
 }
 
 export function Layout() {
-  const { sidebarOpen, setSidebarOpen, toggleSidebar, isMobile } = useSidebar();
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, isMobile, sidebarWidth, setSidebarWidth, isCollapsed } = useSidebar();
   const { openNewIssue, openOnboarding } = useDialog();
   const { togglePanelVisible } = usePanel();
   const {
@@ -67,6 +68,9 @@ export function Layout() {
   const lastMainScrollTop = useRef(0);
   const [mobileNavVisible, setMobileNavVisible] = useState(true);
   const [instanceSettingsTarget, setInstanceSettingsTarget] = useState<string>(() => readRememberedInstanceSettingsPath());
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
   const nextTheme = theme === "dark" ? "light" : "dark";
   const matchedCompany = useMemo(() => {
     if (!companyPrefix) return null;
@@ -137,6 +141,47 @@ export function Layout() {
   ]);
 
   const togglePanel = togglePanelVisible;
+
+  // Sidebar resize drag handler (desktop only)
+  const onResizePointerDown = useCallback((e: React.PointerEvent) => {
+    if (isMobile) return;
+    e.preventDefault();
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = sidebarWidth;
+
+    const onPointerMove = (ev: PointerEvent) => {
+      if (!isDragging.current) return;
+      const delta = ev.clientX - dragStartX.current;
+      const raw = dragStartWidth.current + delta;
+      // Snap to icon-only below the collapse threshold
+      const next = raw < SIDEBAR_COLLAPSE_THRESHOLD ? SIDEBAR_ICON_WIDTH : Math.min(raw, 480);
+      setSidebarWidth(next);
+    };
+
+    const onPointerUp = () => {
+      isDragging.current = false;
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+  }, [isMobile, sidebarWidth, setSidebarWidth]);
+
+  // Double-click the handle to toggle between collapsed and expanded
+  const onResizeDoubleClick = useCallback(() => {
+    if (isMobile) return;
+    if (isCollapsed) {
+      setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+    } else {
+      setSidebarWidth(SIDEBAR_ICON_WIDTH);
+    }
+  }, [isMobile, isCollapsed, setSidebarWidth]);
 
   useCompanyPageMemory();
 
@@ -346,11 +391,28 @@ export function Layout() {
               <div
                 className={cn(
                   "overflow-hidden transition-[width] duration-100 ease-out",
-                  sidebarOpen ? "w-60" : "w-0"
+                  sidebarOpen ? "" : "w-0"
                 )}
+                style={sidebarOpen ? { width: sidebarWidth } : undefined}
               >
                 {isInstanceSettingsRoute ? <InstanceSidebar /> : <Sidebar />}
               </div>
+              {/* Drag handle — only visible when sidebar is open */}
+              {sidebarOpen && (
+                <div
+                  className="relative flex items-center justify-center w-0 shrink-0 cursor-col-resize group z-10"
+                  onPointerDown={onResizePointerDown}
+                  onDoubleClick={onResizeDoubleClick}
+                  title="Drag to resize · Double-click to toggle"
+                >
+                  {/* Invisible wider hit area */}
+                  <div className="absolute inset-y-0 -left-1.5 -right-1.5" />
+                  {/* Visible indicator line */}
+                  <div className="absolute inset-y-0 left-0 w-px bg-border group-hover:bg-primary/40 transition-colors" />
+                  {/* Center grip dot */}
+                  <div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 h-6 w-1 rounded-full bg-border group-hover:bg-primary/50 transition-colors opacity-0 group-hover:opacity-100" />
+                </div>
+              )}
             </div>
             <div className="border-t border-r border-border px-3 py-2">
               <div className="flex items-center gap-1">
