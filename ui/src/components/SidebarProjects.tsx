@@ -70,29 +70,31 @@ function SortableProjectItem({
         transition,
         zIndex: isDragging ? 10 : undefined,
       }}
-      className={cn(isDragging && "opacity-80")}
+      className={cn("w-full", isDragging && "opacity-80")}
       {...attributes}
       {...listeners}
     >
       <div className="flex flex-col gap-0.5">
         {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild className="w-full">
-              <NavLink
-                to={`/projects/${routeRef}/issues`}
-                onClick={() => { if (isMobile) setSidebarOpen(false); }}
-                className={cn(
-                  "flex items-center justify-center py-1.5 text-[13px] font-medium transition-colors w-full px-0",
-                  activeProjectRef === routeRef || activeProjectRef === project.id
-                    ? "bg-accent text-foreground"
-                    : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
-                )}
-              >
-                <span className="shrink-0 h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: project.color ?? "#6366f1" }} />
-              </NavLink>
-            </TooltipTrigger>
-            <TooltipContent side="right">{project.name}</TooltipContent>
-          </Tooltip>
+          <div className="w-full">
+            <Tooltip>
+              <TooltipTrigger asChild className="w-full">
+                <NavLink
+                  to={`/projects/${routeRef}/issues`}
+                  onClick={() => { if (isMobile) setSidebarOpen(false); }}
+                  className={cn(
+                    "flex items-center justify-center py-1.5 text-[13px] font-medium transition-colors w-full px-0",
+                    activeProjectRef === routeRef || activeProjectRef === project.id
+                      ? "bg-accent text-foreground"
+                      : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
+                  )}
+                >
+                  <span className="shrink-0 h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: project.color ?? "#6366f1" }} />
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right">{project.name}</TooltipContent>
+            </Tooltip>
+          </div>
         ) : (
           <NavLink
             to={`/projects/${routeRef}/issues`}

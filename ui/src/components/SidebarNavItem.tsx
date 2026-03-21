@@ -107,10 +107,12 @@ export function SidebarNavItem({
 
   if (isCollapsed) {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
-      </Tooltip>
+      <div className="w-full">
+        <Tooltip>
+          <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
+          <TooltipContent side="right">{label}</TooltipContent>
+        </Tooltip>
+      </div>
     );
   }
 
