@@ -156,7 +156,7 @@ export function SidebarAgents() {
             return isCollapsed ? (
               <div key={agent.id} className="w-full">
                 <Tooltip>
-                  <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
                   <TooltipContent side="right">{agent.name}</TooltipContent>
                 </Tooltip>
               </div>

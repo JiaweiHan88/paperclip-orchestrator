@@ -78,7 +78,7 @@ function SortableProjectItem({
         {isCollapsed ? (
           <div className="w-full">
             <Tooltip>
-              <TooltipTrigger asChild className="w-full">
+              <TooltipTrigger asChild>
                 <NavLink
                   to={`/projects/${routeRef}/issues`}
                   onClick={() => { if (isMobile) setSidebarOpen(false); }}
