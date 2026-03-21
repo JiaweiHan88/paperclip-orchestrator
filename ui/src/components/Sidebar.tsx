@@ -141,12 +141,12 @@ export function Sidebar() {
         </SidebarSection>
 
         <SidebarSection label="Projects">
-          <SidebarNavItem to="/projects" label="All Projects" icon={FolderKanban} end />
+          {isCollapsed && <SidebarNavItem to="/projects" label="All Projects" icon={FolderKanban} end />}
           <SidebarProjects />
         </SidebarSection>
 
         <SidebarSection label="Agents">
-          <SidebarNavItem to="/agents/all" label="All Agents" icon={Bot} />
+          {isCollapsed && <SidebarNavItem to="/agents/all" label="All Agents" icon={Bot} />}
           <SidebarAgents />
         </SidebarSection>
 
