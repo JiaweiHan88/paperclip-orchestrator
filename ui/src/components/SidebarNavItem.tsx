@@ -109,7 +109,7 @@ export function SidebarNavItem({
     return (
       <div className="w-full">
         <Tooltip>
-          <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
           <TooltipContent side="right">{label}</TooltipContent>
         </Tooltip>
       </div>
