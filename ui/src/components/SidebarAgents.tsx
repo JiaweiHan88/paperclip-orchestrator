@@ -154,10 +154,12 @@ export function SidebarAgents() {
               </NavLink>
             );
             return isCollapsed ? (
-              <Tooltip key={agent.id}>
-                <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
-                <TooltipContent side="right">{agent.name}</TooltipContent>
-              </Tooltip>
+              <div key={agent.id} className="w-full">
+                <Tooltip>
+                  <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
+                  <TooltipContent side="right">{agent.name}</TooltipContent>
+                </Tooltip>
+              </div>
             ) : link;
           })}
         </div>
