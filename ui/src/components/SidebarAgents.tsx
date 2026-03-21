@@ -11,6 +11,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { cn, agentRouteRef, agentUrl } from "../lib/utils";
 import { AgentIcon } from "./AgentIconPicker";
 import { BudgetSidebarMarker } from "./BudgetSidebarMarker";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
@@ -119,8 +120,8 @@ export function SidebarAgents() {
                   if (isMobile) setSidebarOpen(false);
                 }}
                 className={cn(
-                  "flex items-center gap-2.5 py-1.5 text-[13px] font-medium transition-colors",
-                  isCollapsed ? "justify-center px-0 w-full" : "px-3",
+                  "flex items-center gap-2.5 py-1.5 text-[13px] font-medium transition-colors w-full",
+                  isCollapsed ? "justify-center px-0" : "px-3",
                   activeAgentId === agentRouteRef(agent)
                     ? "bg-accent text-foreground"
                     : "text-foreground/80 hover:bg-accent/50 hover:text-foreground"
@@ -153,9 +154,10 @@ export function SidebarAgents() {
               </NavLink>
             );
             return isCollapsed ? (
-              <div key={agent.id}>
-                {link}
-              </div>
+              <Tooltip key={agent.id}>
+                <TooltipTrigger asChild className="w-full">{link}</TooltipTrigger>
+                <TooltipContent side="right">{agent.name}</TooltipContent>
+              </Tooltip>
             ) : link;
           })}
         </div>

@@ -21,6 +21,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { cn, projectRouteRef } from "../lib/utils";
 import { useProjectOrder } from "../hooks/useProjectOrder";
 import { BudgetSidebarMarker } from "./BudgetSidebarMarker";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
@@ -74,30 +75,40 @@ function SortableProjectItem({
       {...listeners}
     >
       <div className="flex flex-col gap-0.5">
-        <NavLink
-          to={`/projects/${routeRef}/issues`}
-          onClick={() => {
-            if (isMobile) setSidebarOpen(false);
-          }}
-          className={cn(
-            "flex items-center gap-2.5 py-1.5 text-[13px] font-medium transition-colors",
-            isCollapsed ? "justify-center px-0 w-full" : "px-3",
-            activeProjectRef === routeRef || activeProjectRef === project.id
-              ? "bg-accent text-foreground"
-              : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
-          )}
-        >
-          <span
-            className="shrink-0 h-3.5 w-3.5 rounded-sm"
-            style={{ backgroundColor: project.color ?? "#6366f1" }}
-          />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 truncate">{project.name}</span>
-              {project.pauseReason === "budget" ? <BudgetSidebarMarker title="Project paused by budget" /> : null}
-            </>
-          )}
-        </NavLink>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild className="w-full">
+              <NavLink
+                to={`/projects/${routeRef}/issues`}
+                onClick={() => { if (isMobile) setSidebarOpen(false); }}
+                className={cn(
+                  "flex items-center justify-center py-1.5 text-[13px] font-medium transition-colors w-full px-0",
+                  activeProjectRef === routeRef || activeProjectRef === project.id
+                    ? "bg-accent text-foreground"
+                    : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
+                )}
+              >
+                <span className="shrink-0 h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: project.color ?? "#6366f1" }} />
+              </NavLink>
+            </TooltipTrigger>
+            <TooltipContent side="right">{project.name}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <NavLink
+            to={`/projects/${routeRef}/issues`}
+            onClick={() => { if (isMobile) setSidebarOpen(false); }}
+            className={cn(
+              "flex items-center gap-2.5 py-1.5 px-3 text-[13px] font-medium transition-colors w-full",
+              activeProjectRef === routeRef || activeProjectRef === project.id
+                ? "bg-accent text-foreground"
+                : "text-foreground/80 hover:bg-accent/50 hover:text-foreground",
+            )}
+          >
+            <span className="shrink-0 h-3.5 w-3.5 rounded-sm" style={{ backgroundColor: project.color ?? "#6366f1" }} />
+            <span className="flex-1 truncate">{project.name}</span>
+            {project.pauseReason === "budget" ? <BudgetSidebarMarker title="Project paused by budget" /> : null}
+          </NavLink>
+        )}
         {projectSidebarSlots.length > 0 && (
           <div className="ml-5 flex flex-col gap-0.5">
             {projectSidebarSlots.map((slot) => (
