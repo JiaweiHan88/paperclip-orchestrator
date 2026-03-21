@@ -16,7 +16,7 @@ export function SidebarSection({ label, children }: SidebarSectionProps) {
         </div>
       )}
       {isCollapsed && <div className="border-t border-border/50 mx-2 my-1" />}
-      <div className="flex flex-col gap-0.5 mt-0.5">{children}</div>
+      <div className="flex flex-col gap-0.5 mt-0.5 w-full">{children}</div>
     </div>
   );
 }
