@@ -937,6 +937,10 @@ export function issueRoutes(db: Db, storage: StorageService) {
       existing.status === "backlog" &&
       issue.status !== "backlog" &&
       req.body.status !== undefined;
+    const statusChangedToDone =
+      existing.status !== "done" &&
+      issue.status === "done" &&
+      req.body.status !== undefined;
 
     // Merge all wakeups from this update into one enqueue per agent to avoid duplicate runs.
     void (async () => {
@@ -964,6 +968,34 @@ export function issueRoutes(db: Db, storage: StorageService) {
           requestedByActorId: actor.actorId,
           contextSnapshot: { issueId: issue.id, source: "issue.status_change" },
         });
+      }
+
+      // When a child issue moves to "done", wake the parent's assignee so it
+      // can re-evaluate dependencies and promote the next wave of tasks.
+      // This is essential for pipeline orchestration (CEO re-evaluation).
+      if (statusChangedToDone && issue.parentId) {
+        try {
+          const parentIssue = await svc.getById(issue.parentId);
+          if (parentIssue?.assigneeAgentId && !wakeups.has(parentIssue.assigneeAgentId)) {
+            wakeups.set(parentIssue.assigneeAgentId, {
+              source: "automation",
+              triggerDetail: "system",
+              reason: "child_issue_done",
+              payload: { issueId: issue.parentId, childIssueId: issue.id, mutation: "update" },
+              requestedByActorType: actor.actorType,
+              requestedByActorId: actor.actorId,
+              contextSnapshot: {
+                issueId: issue.parentId,
+                taskId: issue.parentId,
+                childIssueId: issue.id,
+                wakeReason: "child_issue_done",
+                source: "child.status_change",
+              },
+            });
+          }
+        } catch (err) {
+          logger.warn({ err, issueId: issue.id, parentId: issue.parentId }, "failed to wake parent assignee on child done");
+        }
       }
 
       if (commentBody && comment) {
