@@ -6,6 +6,7 @@ export const processAdapter: ServerAdapterModule = {
   type: "process",
   execute,
   testEnvironment,
+  supportsLocalAgentJwt: true,
   models: [],
   agentConfigurationDoc: `# process agent configuration
 
