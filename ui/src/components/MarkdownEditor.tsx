@@ -30,6 +30,61 @@ import {
 import { buildProjectMentionHref, parseProjectMentionHref } from "@paperclipai/shared";
 import { cn } from "../lib/utils";
 
+/**
+ * Escape `<` characters that are not part of valid HTML tags or comments.
+ *
+ * MDXEditor uses an MDX parser that treats every `<` as the start of a
+ * JSX element.  Tokens like `<2s`, `<100`, or even `a<b` (meaning
+ * "a is less than b") crash the parser when they don't form well-structured
+ * tags.
+ *
+ * We keep `<` only when it is clearly part of a recognisable HTML construct:
+ *   - Opening tags:   `<div>`, `<span class="x">`, `<br />`
+ *   - Closing tags:   `</div>`
+ *   - Comments:       `<!-- ... -->`
+ *
+ * Every other `<` is replaced with `&lt;` so the parser treats it as
+ * literal text.
+ */
+function escapeBareAngleBrackets(md: string): string {
+  // Matches a `<` that starts a real, *closed* HTML construct:
+  //   1. `<!-- ... -->`                    — HTML comment
+  //   2. `</tagname>`                      — closing tag
+  //   3. `<tagname>`, `<tagname ...>`, `<tagname />`  — opening / self-closing tag
+  // The key requirements are:
+  //   - A matching `>` exists, so bare `<b` in prose won't match.
+  //   - No nested `<` appears between the opening `<` and its `>`,
+  //     preventing `<b and <em>` from being treated as one tag.
+  const validHtmlRe = /^(?:<!--[\s\S]*?-->|<\/[a-zA-Z][a-zA-Z0-9]*\s*>|<[a-zA-Z][a-zA-Z0-9]*(?:\s[^<>]*)?\/??>)/;
+
+  const result: string[] = [];
+  let i = 0;
+  while (i < md.length) {
+    if (md[i] === "<") {
+      const rest = md.slice(i);
+      if (validHtmlRe.test(rest)) {
+        // Find the end of the matched tag so we can push it whole
+        const match = rest.match(validHtmlRe)!;
+        result.push(match[0]);
+        i += match[0].length;
+      } else {
+        result.push("&lt;");
+        i++;
+      }
+    } else {
+      // Fast-forward to the next `<` or end of string
+      const next = md.indexOf("<", i);
+      if (next === -1) {
+        result.push(md.slice(i));
+        break;
+      }
+      result.push(md.slice(i, next));
+      i = next;
+    }
+  }
+  return result.join("");
+}
+
 /* ---- Mention types ---- */
 
 export interface MentionOption {
@@ -304,7 +359,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 
   useEffect(() => {
     if (value !== latestValueRef.current) {
-      ref.current?.setMarkdown(value);
+      ref.current?.setMarkdown(escapeBareAngleBrackets(value));
       latestValueRef.current = value;
     }
   }, [value]);
@@ -576,7 +631,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     >
       <MDXEditor
         ref={ref}
-        markdown={value}
+        markdown={escapeBareAngleBrackets(value)}
         placeholder={placeholder}
         onChange={(next) => {
           latestValueRef.current = next;
