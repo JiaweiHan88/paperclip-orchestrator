@@ -37,8 +37,9 @@ async function resolveBridgeUrl(envUrl: string): Promise<string> {
 }
 
 /**
- * Try to register all tools from the bridge. Retries with exponential backoff
- * (up to ~5 min total) so the worker recovers if the bridge starts after the plugin.
+ * Try to register all tools from the bridge. Makes one immediate attempt
+ * (awaited by the caller) and, if that fails, schedules background retries
+ * with exponential backoff so the worker recovers when the bridge starts.
  */
 async function registerBridgeTools(
   ctx: PluginContext,
@@ -47,48 +48,62 @@ async function registerBridgeTools(
   buildCredentials: (config: ReturnType<typeof getConfig> extends Promise<infer T> ? T : never) => Promise<Record<string, unknown>>,
   logPrefix: string,
 ): Promise<void> {
-  const delays = [2_000, 5_000, 10_000, 20_000, 30_000, 60_000, 120_000, 180_000];
+  const doRegister = async (bridgeUrl: string) => {
+    const bridge = createBridgeClient(bridgeUrl, packageSlug);
+    const tools = await bridge.getToolManifest();
+    for (const tool of tools) {
+      ctx.tools.register(
+        tool.name,
+        {
+          displayName: tool.display_name,
+          description: tool.description,
+          parametersSchema: tool.parameters_schema,
+        },
+        async (params, _runCtx) => {
+          const config = await getConfig(ctx);
+          const credentials = await buildCredentials(config);
+          const execUrl = await resolveBridgeUrl(configuredUrl);
+          const execBridge = createBridgeClient(execUrl, packageSlug);
+          const result = await execBridge.execute(tool.name, params as Record<string, unknown>, credentials);
+          if (result.error) return { error: result.error };
+          return { content: result.content, data: result.data };
+        },
+      );
+    }
+    ctx.logger.info(`${logPrefix}: registered tools from bridge`, { count: tools.length, bridgeUrl });
+  };
 
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    try {
-      const bridgeUrl = await resolveBridgeUrl(configuredUrl);
-      const bridge = createBridgeClient(bridgeUrl, packageSlug);
-      const tools = await bridge.getToolManifest();
-      for (const tool of tools) {
-        ctx.tools.register(
-          tool.name,
-          {
-            displayName: tool.display_name,
-            description: tool.description,
-            parametersSchema: tool.parameters_schema,
-          },
-          async (params, _runCtx) => {
-            const config = await getConfig(ctx);
-            const credentials = await buildCredentials(config);
-            // Re-resolve URL at call time too, in case it changed
-            const execUrl = await resolveBridgeUrl(configuredUrl);
-            const execBridge = createBridgeClient(execUrl, packageSlug);
-            const result = await execBridge.execute(tool.name, params as Record<string, unknown>, credentials);
-            if (result.error) return { error: result.error };
-            return { content: result.content, data: result.data };
-          },
-        );
-      }
-      ctx.logger.info(`${logPrefix}: registered tools from bridge`, { count: tools.length, bridgeUrl });
-      return;
-    } catch (err) {
-      if (attempt === delays.length) {
-        ctx.logger.warn(`${logPrefix}: bridge unavailable after all retries — tools not registered`, {
-          configuredUrl,
+  // First attempt is synchronous (awaited by caller)
+  try {
+    const bridgeUrl = await resolveBridgeUrl(configuredUrl);
+    await doRegister(bridgeUrl);
+    return;
+  } catch (err) {
+    ctx.logger.warn(`${logPrefix}: bridge unavailable — will retry in background`, {
+      configuredUrl,
+      error: (err as Error).message,
+    });
+  }
+
+  // Background retries with exponential backoff
+  const delays = [2_000, 5_000, 10_000, 20_000, 30_000, 60_000, 120_000, 180_000];
+  void (async () => {
+    for (const delay of delays) {
+      await new Promise((r) => setTimeout(r, delay));
+      try {
+        const bridgeUrl = await resolveBridgeUrl(configuredUrl);
+        await doRegister(bridgeUrl);
+        return;
+      } catch (err) {
+        ctx.logger.debug(`${logPrefix}: bridge not ready, retrying in ${delay / 1000}s`, {
           error: (err as Error).message,
         });
-        return;
       }
-      const delay = delays[attempt]!;
-      ctx.logger.debug(`${logPrefix}: bridge not ready, retrying in ${delay / 1000}s`, { attempt });
-      await new Promise((r) => setTimeout(r, delay));
     }
-  }
+    ctx.logger.warn(`${logPrefix}: bridge unavailable after all retries — tools not registered`, {
+      configuredUrl,
+    });
+  })();
 }
 
 // ---------------------------------------------------------------------------
@@ -174,8 +189,8 @@ const plugin: PaperclipPlugin = definePlugin({
     const bridgeUrl = process.env.AI_TOOLS_BRIDGE_URL ?? "http://ai-tools-bridge:8000";
     currentBridgeUrl = bridgeUrl;
 
-    // Fire-and-forget: retries in background until bridge is reachable
-    void registerBridgeTools(
+    // Await first attempt; retries happen internally with backoff
+    await registerBridgeTools(
       ctx,
       "jira",
       bridgeUrl,
