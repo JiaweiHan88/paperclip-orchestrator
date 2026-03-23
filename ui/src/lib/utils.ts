@@ -43,6 +43,48 @@ export function relativeTime(date: Date | string): string {
   return formatDate(date);
 }
 
+/**
+ * Smart activity-log timestamp:
+ *  - < 1 hour ago  → "Xm ago"
+ *  - same calendar day, ≥ 1 hour → "HH:mm"
+ *  - different day → "Mar 23, 2026 14:05"
+ */
+export function formatActivityTime(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+
+  if (diffSec < 60) return "just now";
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+
+  // Same calendar day → show time as HH:mm
+  const sameDay =
+    now.getFullYear() === then.getFullYear() &&
+    now.getMonth() === then.getMonth() &&
+    now.getDate() === then.getDate();
+
+  if (sameDay) {
+    return then.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  }
+
+  // Different day → date + time
+  return then.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
