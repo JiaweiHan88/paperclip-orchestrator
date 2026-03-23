@@ -118,6 +118,7 @@ export interface Issue {
   identifier: string | null;
   requestDepth: number;
   billingCode: string | null;
+  metadata: Record<string, unknown> | null;
   assigneeAdapterOverrides: IssueAssigneeAdapterOverrides | null;
   executionWorkspaceId: string | null;
   executionWorkspacePreference: string | null;
