@@ -15,7 +15,7 @@ import { assigneeValueFromSelection, suggestedCommentAssigneeValue } from "../li
 import { queryKeys } from "../lib/queryKeys";
 import { readIssueDetailBreadcrumb } from "../lib/issueDetailBreadcrumb";
 import { useProjectOrder } from "../hooks/useProjectOrder";
-import { relativeTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
+import { relativeTime, formatActivityTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
 import { InlineEditor } from "../components/InlineEditor";
 import { CommentThread } from "../components/CommentThread";
 import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
@@ -138,6 +138,15 @@ function titleizeFilename(input: string) {
     .join(" ");
 }
 
+/** Fields we handle explicitly so we don't double-report them as generic updates. */
+const HANDLED_UPDATE_KEYS = new Set([
+  "status", "priority", "assigneeAgentId", "assigneeUserId",
+  "title", "description", "projectId", "billingCode", "labelIds",
+  "executionWorkspacePreference", "hiddenAt",
+  // metadata keys not shown to users
+  "_previous", "identifier", "source", "comment",
+]);
+
 function formatAction(action: string, details?: Record<string, unknown> | null): string {
   if (action === "issue.updated" && details) {
     const previous = (details._previous ?? {}) as Record<string, unknown>;
@@ -147,16 +156,16 @@ function formatAction(action: string, details?: Record<string, unknown> | null):
       const from = previous.status;
       parts.push(
         from
-          ? `changed the status from ${humanizeValue(from)} to ${humanizeValue(details.status)}`
-          : `changed the status to ${humanizeValue(details.status)}`
+          ? `changed status from ${humanizeValue(from)} to ${humanizeValue(details.status)}`
+          : `set status to ${humanizeValue(details.status)}`
       );
     }
     if (details.priority !== undefined) {
       const from = previous.priority;
       parts.push(
         from
-          ? `changed the priority from ${humanizeValue(from)} to ${humanizeValue(details.priority)}`
-          : `changed the priority to ${humanizeValue(details.priority)}`
+          ? `changed priority from ${humanizeValue(from)} to ${humanizeValue(details.priority)}`
+          : `set priority to ${humanizeValue(details.priority)}`
       );
     }
     if (details.assigneeAgentId !== undefined || details.assigneeUserId !== undefined) {
@@ -168,6 +177,26 @@ function formatAction(action: string, details?: Record<string, unknown> | null):
     }
     if (details.title !== undefined) parts.push("updated the title");
     if (details.description !== undefined) parts.push("updated the description");
+    if (details.projectId !== undefined) {
+      parts.push(details.projectId ? "moved to a different project" : "removed from project");
+    }
+    if (details.billingCode !== undefined) {
+      parts.push(details.billingCode ? `set billing code to ${details.billingCode}` : "cleared billing code");
+    }
+    if (details.labelIds !== undefined) parts.push("updated labels");
+    if (details.executionWorkspacePreference !== undefined) {
+      parts.push(`changed workspace preference to ${humanizeValue(details.executionWorkspacePreference)}`);
+    }
+    if (details.hiddenAt !== undefined) {
+      parts.push(details.hiddenAt ? "archived the issue" : "unarchived the issue");
+    }
+
+    // Catch any other updated fields we haven't explicitly handled
+    for (const key of Object.keys(details)) {
+      if (!HANDLED_UPDATE_KEYS.has(key)) {
+        parts.push(`updated ${humanizeValue(key)}`);
+      }
+    }
 
     if (parts.length > 0) return parts.join(", ");
   }
@@ -1099,13 +1128,34 @@ export function IssueDetail() {
             <p className="text-xs text-muted-foreground">No activity yet.</p>
           ) : (
             <div className="space-y-1.5">
-              {activity.slice(0, 20).map((evt) => (
-                <div key={evt.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <ActorIdentity evt={evt} agentMap={agentMap} />
-                  <span>{formatAction(evt.action, evt.details)}</span>
-                  <span className="ml-auto shrink-0">{relativeTime(evt.createdAt)}</span>
-                </div>
-              ))}
+              {activity.slice(0, 20).map((evt) => {
+                const commentId =
+                  evt.action === "issue.comment_added" &&
+                  evt.details &&
+                  typeof evt.details.commentId === "string"
+                    ? evt.details.commentId
+                    : null;
+                const actionText = formatAction(evt.action, evt.details);
+
+                return (
+                  <div key={evt.id} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <ActorIdentity evt={evt} agentMap={agentMap} />
+                    <span className="min-w-0">
+                      {commentId ? (
+                        <a
+                          href={`#comment-${commentId}`}
+                          className="hover:text-foreground underline decoration-muted-foreground/40 hover:decoration-foreground transition-colors"
+                        >
+                          {actionText}
+                        </a>
+                      ) : (
+                        actionText
+                      )}
+                    </span>
+                    <span className="ml-auto shrink-0">{formatActivityTime(evt.createdAt)}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </TabsContent>
