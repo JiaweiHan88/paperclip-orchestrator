@@ -145,6 +145,7 @@ function makeIssue(id: string, isUnreadForMe: boolean): Issue {
     identifier: `PAP-${id}`,
     requestDepth: 0,
     billingCode: null,
+    metadata: null,
     assigneeAdapterOverrides: null,
     executionWorkspaceId: null,
     executionWorkspacePreference: null,
